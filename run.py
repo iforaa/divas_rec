@@ -14,7 +14,8 @@ uid_to_idx = {}
 idx_to_uid = {}
 model = implicit.als.AlternatingLeastSquares(factors=50)
 path=''
-
+inventory = pd.read_csv(path+'raw_inventory.csv')
+avin = inventory.loc[inventory.qty>0].prod_id.unique() # available inventaries
 
 
 
@@ -22,12 +23,16 @@ path=''
 def similar_items(pid):
     idx = mid_to_idx[pid]
     s = ""
-    related = model.similar_items(idx)
+    related = model.similar_items(idx, 50)
     recs = []
     for id, sim in related:
-        s += "http://cdn.shopdiscountdivas.com/account/api/getProductDetails?app_version=1.3.1&prod_id="+str(idx_to_mid[id])
-        s += "\n"
-        recs.append(idx_to_mid[id])
+        if id in avin:
+            s += "http://cdn.shopdiscountdivas.com/account/api/getProductDetails?app_version=1.3.1&prod_id="+str(idx_to_mid[id])
+            s += "\n"
+            result = {"pid": idx_to_mid[id], "sim": float(sim)}
+            recs.append(result)
+
+    # print(avin)
     ret = {"recs": recs}
     return json.dumps(ret)
     
@@ -57,7 +62,7 @@ def start():
     cid_product = pd.read_csv(path+'prepared_data.csv')
     # cp = cid_product.drop(cid_product.index[np.arange(800000)])
     cp = cid_product
-
+    
     
     for (idx, mid) in enumerate(cp.pid.unique().tolist()):
         mid_to_idx[mid] = idx
